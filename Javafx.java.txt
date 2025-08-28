@@ -1,0 +1,67 @@
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.stage.Stage;
+
+import java.io.*;
+import java.net.*;
+
+public class ChatClientFX extends Application {
+    private Socket socket;
+    private BufferedReader reader;
+    private PrintWriter writer;
+    private TextArea chatArea;
+    private TextField inputField;
+    private String username;
+
+    @Override
+    public void start(Stage stage) throws Exception {
+        chatArea = new TextArea();
+        chatArea.setEditable(false);
+
+        inputField = new TextField();
+        inputField.setOnAction(e -> sendMessage());
+
+        VBox layout = new VBox(10, chatArea, inputField);
+        Scene scene = new Scene(layout, 400, 400);
+        stage.setScene(scene);
+        stage.setTitle("JavaFX Chat Client");
+        stage.show();
+
+        connectToServer();
+    }
+
+    private void connectToServer() {
+        try {
+            socket = new Socket("localhost", 1234);
+            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            writer = new PrintWriter(socket.getOutputStream(), true);
+
+            new Thread(() -> {
+                try {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        chatArea.appendText(line + "\n");
+                    }
+                } catch (IOException e) {
+                    chatArea.appendText("Disconnected.\n");
+                }
+            }).start();
+        } catch (IOException e) {
+            chatArea.appendText("Error connecting to server.\n");
+        }
+    }
+
+    private void sendMessage() {
+        String msg = inputField.getText();
+        if (!msg.isEmpty()) {
+            writer.println(msg);
+            inputField.clear();
+        }
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}
